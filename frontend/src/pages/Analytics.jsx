@@ -9,55 +9,94 @@ const API = import.meta.env.VITE_API_URL || 'http://localhost:3000'
 export default function Analytics({ shortCode }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   useEffect(() => {
     fetch(`${API}/api/analytics/${shortCode}`)
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
-      .catch(e => { setError(e.message); setLoading(false) })
+      .catch(() => setLoading(false))
   }, [shortCode])
 
-  if (loading) return <p style={{ padding: 40 }}>Loading analytics...</p>
-  if (error) return <p style={{ padding: 40, color: 'red' }}>Error: {error}</p>
+  if (loading) return (
+    <div className="analytics-page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ color: '#475569', fontSize: 16 }}>Loading analytics...</div>
+    </div>
+  )
 
   const chartData = {
-    labels: data.history.map(h => {
+    labels: data?.history?.map(h => {
       const d = new Date(h.hour)
-      return d.toLocaleDateString() + ' ' + d.getHours() + ':00'
-    }),
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' ' + d.getHours() + ':00'
+    }) || [],
     datasets: [{
-      label: 'Clicks per hour',
-      data: data.history.map(h => h.clicks),
-      backgroundColor: '#4F46E5',
-      borderRadius: 4
+      label: 'Clicks',
+      data: data?.history?.map(h => h.clicks) || [],
+      backgroundColor: 'rgba(99, 102, 241, 0.7)',
+      borderColor: '#6366f1',
+      borderWidth: 1,
+      borderRadius: 6,
     }]
   }
 
+  const chartOptions = {
+    responsive: true,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(15, 15, 26, 0.9)',
+        titleColor: '#a5b4fc',
+        bodyColor: '#e2e8f0',
+        borderColor: 'rgba(99,102,241,0.3)',
+        borderWidth: 1,
+      }
+    },
+    scales: {
+      x: {
+        ticks: { color: '#475569', font: { size: 11 } },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      },
+      y: {
+        beginAtZero: true,
+        ticks: { color: '#475569', stepSize: 1 },
+        grid: { color: 'rgba(255,255,255,0.05)' }
+      }
+    }
+  }
+
   return (
-    <div style={{ maxWidth: 700, margin: '60px auto', padding: '0 20px', fontFamily: 'system-ui' }}>
-      <a href="/" style={{ color: '#6B7280', fontSize: 14 }}>Back</a>
-      <h1 style={{ marginTop: 12 }}>Analytics: <code>{shortCode}</code></h1>
-      <p style={{ fontSize: 18 }}>
-        Total clicks: <strong style={{ color: '#4F46E5' }}>{data.total_clicks}</strong>
-      </p>
-      {data.history.length === 0 ? (
-        <p style={{ color: '#9CA3AF' }}>No clicks yet. Visit the short URL first.</p>
-      ) : (
-        <div data-testid="analytics-chart" style={{ marginTop: 24 }}>
-          <Bar data={chartData} options={{
-            responsive: true,
-            plugins: {
-              legend: { display: false },
-              title: { display: true, text: 'Clicks over time' }
-            },
-            scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
-          }} />
+    <div className="analytics-page">
+      <div className="analytics-card">
+        <a href="/" className="back-link">← Back to shortener</a>
+
+        <div className="analytics-header">
+          <div className="badge" style={{ marginBottom: 12 }}>
+            <span className="badge-dot"></span>
+            LIVE ANALYTICS
+          </div>
+          <h1>Click Analytics</h1>
+          <p style={{ color: '#475569', fontSize: 14, marginTop: 4 }}>
+            Short code: <code style={{ color: '#a5b4fc', background: 'rgba(99,102,241,0.1)', padding: '2px 8px', borderRadius: 6 }}>{shortCode}</code>
+          </p>
         </div>
-      )}
-      {data.history.length === 0 && (
-        <div data-testid="analytics-chart" style={{ display: 'none' }} />
-      )}
+
+        <div className="total-clicks">
+          <span className="total-clicks-number">{data?.total_clicks || 0}</span>
+          <span className="total-clicks-label">total clicks recorded</span>
+        </div>
+
+        {data?.history?.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">📭</div>
+            <p style={{ fontSize: 16, marginBottom: 8 }}>No clicks yet</p>
+            <p style={{ fontSize: 14 }}>Visit the short URL to start tracking</p>
+            <div data-testid="analytics-chart" style={{ display: 'none' }} />
+          </div>
+        ) : (
+          <div className="chart-container" data-testid="analytics-chart">
+            <Bar data={chartData} options={chartOptions} />
+          </div>
+        )}
+      </div>
     </div>
   )
 }
